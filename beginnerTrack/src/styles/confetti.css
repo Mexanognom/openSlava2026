@@ -1,0 +1,32 @@
+/* Overlay sits above the page content but never blocks pointer events */
+.confetti-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 10;
+}
+
+/* Base particle — all variance is set via inline styles by the JS factory */
+.confetti-particle {
+  position: absolute;
+  top: -12px;
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: rotate(0deg) translateX(0px);
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    top: 110vh;
+    transform: rotate(720deg) translateX(var(--drift, 0px));
+    opacity: 0;
+  }
+}
