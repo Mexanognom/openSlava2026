@@ -4,9 +4,10 @@ import { LoadingSpinner } from '../components/common';
 import { FlightCard } from '../components/flights/FlightCard';
 import { UserIdentification } from '../components/user/UserIdentification';
 import { BookingModal } from '../components/bookings/BookingModal';
+import { BookingAgent } from '../components/flights/BookingAgent';
 import { getFlights } from '../services/api';
 import { useUser } from '../hooks/useUser';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, ArrowUpDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
 
@@ -16,6 +17,8 @@ export const Flights = () => {
   const [filteredFlights, setFilteredFlights] = useState<Flight[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [departureDateFilter, setDepartureDateFilter] = useState('');
+  const [priceSort, setPriceSort] = useState<'asc' | 'desc' | null>(null);
   const [selectedFlight, setSelectedFlight] = useState<Flight | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -25,21 +28,33 @@ export const Flights = () => {
     loadFlights();
   }, []);
 
-  // Filter flights when search term changes
+  // Filter and sort flights when search term, departure date, or sort order changes
   useEffect(() => {
-    if (!searchTerm.trim()) {
-      setFilteredFlights(flights);
-      return;
+    let filtered = flights;
+
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (flight) =>
+          flight.origin.toLowerCase().includes(term) ||
+          flight.destination.toLowerCase().includes(term)
+      );
     }
 
-    const term = searchTerm.toLowerCase();
-    const filtered = flights.filter(
-      (flight) =>
-        flight.origin.toLowerCase().includes(term) ||
-        flight.destination.toLowerCase().includes(term)
-    );
+    if (departureDateFilter) {
+      filtered = filtered.filter(
+        (flight) => flight.departure_time.slice(0, 10) === departureDateFilter
+      );
+    }
+
+    if (priceSort !== null) {
+      filtered = [...filtered].sort((a, b) =>
+        priceSort === 'asc' ? a.price - b.price : b.price - a.price
+      );
+    }
+
     setFilteredFlights(filtered);
-  }, [searchTerm, flights]);
+  }, [searchTerm, departureDateFilter, priceSort, flights]);
 
   const loadFlights = async () => {
     setIsLoading(true);
@@ -93,11 +108,20 @@ export const Flights = () => {
         </p>
       </motion.div>
 
-      {/* Search and Filters */}
+      {/* Booking Agent */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
+      >
+        <BookingAgent flights={flights} onBook={handleBookFlight} />
+      </motion.div>
+
+      {/* Search and Filters */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
         className="glass-card p-6"
       >
         <div className="flex flex-col md:flex-row gap-4">
@@ -112,6 +136,29 @@ export const Flights = () => {
               className="w-full pl-10 pr-4 py-3 bg-white/5 border border-white/10 rounded-lg text-star-white placeholder-star-white/50 focus:outline-none focus:ring-2 focus:ring-cosmic-purple"
             />
           </div>
+
+          {/* Departure date picker */}
+          <div className="relative">
+            <input
+              type="date"
+              value={departureDateFilter}
+              onChange={(e) => setDepartureDateFilter(e.target.value)}
+              className="py-3 px-4 bg-white/5 border border-white/10 rounded-lg text-star-white focus:outline-none focus:ring-2 focus:ring-cosmic-purple [color-scheme:dark]"
+            />
+          </div>
+
+          {/* Price sort toggle */}
+          <button
+            onClick={() => setPriceSort((prev) => (prev === 'asc' ? 'desc' : 'asc'))}
+            className={`flex items-center gap-2 py-3 px-4 border rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-cosmic-purple ${
+              priceSort !== null
+                ? 'bg-cosmic-purple/30 border-cosmic-purple text-star-white'
+                : 'bg-white/5 border-white/10 text-star-white/70 hover:bg-white/10 hover:text-star-white'
+            }`}
+          >
+            <ArrowUpDown size={16} />
+            {priceSort === 'desc' ? 'Price: High to Low' : 'Price: Low to High'}
+          </button>
 
           {/* Filter indicator */}
           <div className="flex items-center gap-2 text-star-white/70">
@@ -133,7 +180,7 @@ export const Flights = () => {
           className="text-center py-12"
         >
           <p className="text-star-white/70 text-lg">
-            {searchTerm ? 'No flights found matching your search' : 'No flights available'}
+            {searchTerm || departureDateFilter ? 'No flights found matching your search' : 'No flights available'}
           </p>
         </motion.div>
       ) : (
